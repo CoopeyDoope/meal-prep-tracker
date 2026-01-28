@@ -103,7 +103,8 @@
 .chip { background: var(--bg-input); border: 1px solid var(--border); color: var(--text-muted); padding: 8px 14px; border-radius: 20px; font-size: 12px; cursor: pointer; white-space: nowrap; }
 .chip.active { background: var(--primary); border-color: var(--primary); color: white; }
 .meal-list { display: flex; flex-direction: column; gap: 12px; }
-.meal-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; display: flex; justify-content: space-between; align-items: center; }
+.meal-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.meal-card-main { flex: 1; min-width: 0; }
 .meal-card h3 { font-size: 14px; margin-bottom: 4px; }
 .meal-tags { display: flex; gap: 6px; margin-top: 6px; }
 .tag { background: var(--bg-input); padding: 2px 8px; border-radius: 4px; font-size: 10px; color: var(--text-muted); }
@@ -111,8 +112,8 @@
 .meal-card-actions .btn-sm { padding: 8px 10px; }
 
 /* Shopping Tab */
-.shopping-tab .btn-primary { width: 100%; margin-bottom: 16px; }
-.shopping-list { background: var(--bg-card); border-radius: var(--radius); padding: 16px; }
+.shopping-tab .btn-primary { width: 100%; margin-top: 8px; }
+.shopping-list { background: var(--bg-card); border-radius: var(--radius); padding: 16px; margin-top: 16px; border: 1px solid var(--border); }
 .shopping-list h2 { margin-bottom: 4px; }
 .list-date { font-size: 12px; color: var(--text-muted); margin-bottom: 16px; }
 .list-category { margin-bottom: 16px; }
@@ -155,6 +156,7 @@
 .form-group { margin-bottom: 14px; }
 .form-group label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
 .form-group input, .form-group select { width: 100%; background: var(--bg-input); border: 1px solid var(--border); color: var(--text); padding: 10px 12px; border-radius: 8px; font-size: 14px; }
+.form-group input[type="checkbox"] { width: auto; margin-right: 8px; }
 .settings-tab .btn { width: 100%; margin-bottom: 8px; }
 .save-settings { position: sticky; bottom: 70px; }
 
@@ -166,7 +168,7 @@
 .modal-actions { display: flex; gap: 12px; margin-top: 20px; }
 .modal-actions .btn { flex: 1; }
 
-.modal-meal-list { max-height: 50vh; overflow-y: auto; }
+.modal-meal-list { max-height: 50vh; overflow-y: auto; margin-bottom: 16px; }
 .modal-meal-item { display: flex; justify-content: space-between; padding: 14px; border-bottom: 1px solid var(--border); cursor: pointer; }
 .modal-meal-item:active { background: var(--bg-input); }
 .modal-meal-item.custom-option { background: var(--primary); border-bottom: 2px solid var(--primary-dark); }
