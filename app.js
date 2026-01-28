@@ -210,4 +210,462 @@ return `<div class="settings-tab">
 <div class="card"><h2>👤 Profile</h2><div class="form-group"><label>Name</label><input type="text" id="set-name" value="${s.profile.name || ''}"></div><div class="form-group"><label>Starting Weight (kg)</label><input type="number" id="set-sw" value="${s.profile.startingWeight}" step="0.1"></div><div class="form-group"><label>Target Weight (kg)</label><input type="number" id="set-tw" value="${s.profile.targetWeight}" step="0.1"></div></div>
 <div class="card"><h2>🎯 Daily Targets</h2><div class="form-group"><label>Calories</label><input type="number" id="set-cal" value="${s.targets.calories}"></div><div class="form-group"><label>Protein (g)</label><input type="number" id="set-pro" value="${s.targets.protein}"></div><div class="form-group"><label>Carbs (g)</label><input type="number" id="set-carb" value="${s.targets.carbs}"></div><div class="form-group"><label>Fats (g)</label><input type="number" id="set-fat" value="${s.targets.fats}"></div></div>
 <div class="card"><h2>🍺 Alcohol</h2><div class="form-group"><label>Calories per drink</label><input type="number" id="set-drinkcal" value="${s.alcohol.defaultCalories}"></div><div class="form-group"><label>Weekly can target</label><input type="number" id="set-cans" value="${s.alcohol.weeklyCanTarget}"></div></div>
-<div class="card"><h2>💾 Data</h2><button class="btn" data-action="export-data">📤 Export Data</button><button class="btn" data-action="import-data">📥 Import Data</button><input type="file" id="import-file" accept=".json" style="display:none"><button
+<div class="card"><h2>💾 Data</h2><button class="btn" data-action="export-data">📤 Export Data</button><button class="btn" data-action="import-data">📥 Import Data</button><input type="file" id="import-file" accept=".json" style="display:none"><button class="btn btn-danger" data-action="clear-data">🗑️ Clear All Data</button></div>
+<button class="btn btn-primary save-settings" data-action="save-settings">Save Settings</button>
+
+  </div>`;
+};
+
+// ==================== MODALS ====================
+const renderModal = () => {
+let content = ‘’;
+if (state.modal === ‘log-meal’) content = renderLogMealModal();
+else if (state.modal === ‘confirm-portion’) content = renderConfirmModal();
+else if (state.modal === ‘add-custom-meal’) content = renderCustomMealModal();
+else if (state.modal === ‘edit-meal’) content = renderEditMealModal();
+else if (state.modal === ‘log-weight’) content = renderLogWeightModal();
+else if (state.modal === ‘generate-list’) content = renderGenerateListModal();
+else if (state.modal === ‘achievement’) content = renderAchievementModal();
+return `<div class="modal-overlay" data-action="close-modal"><div class="modal" onclick="event.stopPropagation()">${content}</div></div>`;
+};
+
+const renderLogMealModal = () => {
+const meals = getAllMeals();
+const period = state.modalData?.period || getMealPeriod();
+return `<div class="modal-content"> <h2>Log ${period}</h2> <div class="modal-meal-list"> <div class="modal-meal-item custom-option" data-action="add-custom-meal-for-period" data-period="${period}"> <span class="meal-name">➕ Add Custom Meal</span> <span class="meal-cals">Enter your own</span> </div> ${meals.map(m => `<div class="modal-meal-item" data-action="select-meal" data-meal-id="${m.id}" data-period="${period}"><span class="meal-name">${m.name}</span><span class="meal-cals">${m.calories} kcal</span></div>`).join(’’)}
+</div>
+<button class="btn" data-action="close-modal">Cancel</button>
+
+  </div>`;
+};
+
+const renderConfirmModal = () => {
+const { meal, period } = state.modalData;
+return `<div class="modal-content"> <h2>Log ${meal.name}</h2> <p>${meal.calories} kcal | P: ${meal.protein}g | C: ${meal.carbs}g | F: ${meal.fats}g</p> <div class="form-group"><label>Portion</label> <select id="portion-size"> <option value="0.5">Half (0.5x)</option> <option value="1" selected>Full (1x)</option> <option value="1.5">Large (1.5x)</option> <option value="2">Double (2x)</option> </select> </div> <div class="form-group"><label>Meal</label> <select id="meal-period">${['breakfast', 'lunch', 'dinner', 'snacks'].map(p => `<option value=”${p}” ${p === period ? ‘selected’ : ‘’}>${p}</option>`).join(’’)}</select>
+</div>
+<div class="modal-actions">
+<button class="btn" data-action="close-modal">Cancel</button>
+<button class="btn btn-primary" data-action="confirm-log">Log Meal</button>
+</div>
+
+  </div>`;
+};
+
+const renderCustomMealModal = () => {
+const period = state.modalData?.period || ‘lunch’;
+return `<div class="modal-content">
+<h2>Add Custom Meal</h2>
+<div class="form-group"><label>Name</label><input type="text" id="custom-name" placeholder="Meal name"></div>
+<div class="form-group"><label>Category</label>
+<select id="custom-cat">
+<option value=“breakfast” ${period === ‘breakfast’ ? ‘selected’ : ‘’}>Breakfast</option>
+<option value=“lunch” ${period === ‘lunch’ ? ‘selected’ : ‘’}>Lunch</option>
+<option value=“dinner” ${period === ‘dinner’ ? ‘selected’ : ‘’}>Dinner</option>
+<option value=“snacks” ${period === ‘snacks’ ? ‘selected’ : ‘’}>Snacks</option>
+</select>
+</div>
+<div class="form-group"><label>Calories</label><input type="number" id="custom-cal" placeholder="0"></div>
+<div class="form-group"><label>Protein (g)</label><input type="number" id="custom-pro" placeholder="0"></div>
+<div class="form-group"><label>Carbs (g)</label><input type="number" id="custom-carb" placeholder="0"></div>
+<div class="form-group"><label>Fats (g)</label><input type="number" id="custom-fat" placeholder="0"></div>
+<div class="form-group">
+<label><input type="checkbox" id="custom-save" checked> Save to meal library</label>
+</div>
+<div class="modal-actions">
+<button class="btn" data-action="close-modal">Cancel</button>
+<button class="btn btn-primary" data-action="save-custom-meal">Save & Log</button>
+</div>
+
+  </div>`;
+};
+
+const renderEditMealModal = () => {
+const meal = state.modalData?.meal;
+if (!meal) return ‘’;
+return `<div class="modal-content"> <h2>Edit ${meal.name}</h2> <p class="edit-note">Changes will be saved for future use</p> <div class="form-group"><label>Calories</label><input type="number" id="edit-cal" value="${meal.calories}"></div> <div class="form-group"><label>Protein (g)</label><input type="number" id="edit-pro" value="${meal.protein}"></div> <div class="form-group"><label>Carbs (g)</label><input type="number" id="edit-carb" value="${meal.carbs}"></div> <div class="form-group"><label>Fats (g)</label><input type="number" id="edit-fat" value="${meal.fats}"></div> <div class="modal-actions"> <button class="btn" data-action="close-modal">Cancel</button> ${meal.isCustom ? `<button class="btn btn-danger" data-action="delete-custom-meal" data-meal-id="${meal.id}">Delete</button>` : ‘’}
+<button class="btn btn-primary" data-action="save-meal-edits" data-meal-id="${meal.id}">Save</button>
+</div>
+
+  </div>`;
+};
+
+const renderLogWeightModal = () => `<div class="modal-content">
+
+  <h2>Log Weight</h2>
+  <div class="form-group"><label>Weight (kg)</label><input type="number" id="weight-val" step="0.1" placeholder="80.0"></div>
+  <div class="form-group"><label>Date</label><input type="date" id="weight-date" value="${today()}"></div>
+  <div class="modal-actions">
+    <button class="btn" data-action="close-modal">Cancel</button>
+    <button class="btn btn-primary" data-action="save-weight">Save Weight</button>
+  </div>
+</div>`;
+
+const renderGenerateListModal = () => {
+const meals = getAllMeals();
+const days = state.shoppingDays || 3;
+let html = `<div class="modal-content generate-list-modal"><h2>Plan Your Meals</h2><p>Select meals for ${days} day${days > 1 ? 's' : ''} (leave blank to skip):</p>`;
+
+for (let i = 0; i < days; i++) {
+const d = new Date();
+d.setDate(d.getDate() + i);
+const dayName = d.toLocaleDateString(‘en-GB’, { weekday: ‘short’, day: ‘numeric’ });
+html += `<div class="plan-day"><h3>${dayName}</h3>`;
+[‘breakfast’, ‘lunch’, ‘dinner’].forEach(p => {
+const filteredMeals = meals.filter(m => m.category === p || m.category === ‘lunch’ || m.category === ‘dinner’ || m.category === ‘breakfast’);
+html += `<div class="plan-meal"><label>${p}</label><select data-day="${i}" data-period="${p}"><option value="">-- Skip --</option>${filteredMeals.map(m => `<option value="${m.id}">${m.name}</option>`).join('')}</select></div>`;
+});
+html += `</div>`;
+}
+
+html += `<div class="modal-actions"><button class="btn" data-action="close-modal">Cancel</button><button class="btn btn-primary" data-action="create-shopping-list">Generate List</button></div></div>`;
+return html;
+};
+
+const renderAchievementModal = () => {
+const a = state.modalData;
+return `<div class="modal-content achievement-modal"><div class="ach-unlock-icon">${a.icon}</div><h2>Achievement Unlocked!</h2><h3>${a.name}</h3><p>${a.desc}</p><p class="xp-reward">+${a.xp} XP</p><button class="btn btn-primary" data-action="close-modal">Awesome!</button></div>`;
+};
+
+// ==================== EVENT HANDLING ====================
+const attachEvents = () => {
+$(’#app’).onclick = e => {
+const target = e.target.closest(’[data-action], [data-tab], [data-filter], [data-period], .modal-overlay’);
+if (!target) return;
+
+```
+if (target.dataset.tab) { state.tab = target.dataset.tab; render(); return; }
+if (target.dataset.filter) { state.selectedMealCategory = target.dataset.filter; render(); return; }
+if (target.classList.contains('meal-tab') && target.dataset.period) { state.activePeriod = target.dataset.period; render(); return; }
+
+const action = target.dataset.action;
+if (action) handleAction(action, target.dataset);
+```
+
+};
+
+const search = $(’#meal-search’);
+if (search) {
+search.oninput = e => {
+const q = e.target.value.toLowerCase();
+$$(’.meal-card’).forEach(card => {
+const name = card.querySelector(‘h3’).textContent.toLowerCase();
+card.style.display = name.includes(q) ? ‘’ : ‘none’;
+});
+};
+}
+
+const fileInput = $(’#import-file’);
+if (fileInput) fileInput.onchange = e => { if (e.target.files[0]) importData(e.target.files[0]); };
+
+const shoppingDays = $(’#shopping-days’);
+if (shoppingDays) shoppingDays.onchange = e => { state.shoppingDays = parseInt(e.target.value); };
+};
+
+const handleAction = (action, data) => {
+switch (action) {
+case ‘close-modal’:
+state.modal = null; state.modalData = null; break;
+case ‘log-meal’:
+state.modal = ‘log-meal’; state.modalData = { period: state.activePeriod }; break;
+case ‘quick-log’:
+case ‘select-meal’:
+const meal = getAllMeals().find(m => m.id === data.mealId);
+if (meal) { state.modal = ‘confirm-portion’; state.modalData = { meal, period: data.period || state.activePeriod }; }
+break;
+case ‘confirm-log’:
+logMeal(); break;
+case ‘delete-meal’:
+deleteMeal(data.period, parseInt(data.index)); break;
+case ‘add-custom-meal’:
+state.modal = ‘add-custom-meal’; state.modalData = { period: state.activePeriod }; break;
+case ‘add-custom-meal-for-period’:
+state.modal = ‘add-custom-meal’; state.modalData = { period: data.period, logAfter: true }; break;
+case ‘save-custom-meal’:
+saveCustomMeal(); break;
+case ‘edit-meal’:
+const editMeal = getAllMeals().find(m => m.id === data.mealId);
+if (editMeal) { state.modal = ‘edit-meal’; state.modalData = { meal: editMeal }; }
+break;
+case ‘save-meal-edits’:
+saveMealEdits(data.mealId); break;
+case ‘delete-custom-meal’:
+deleteCustomMeal(data.mealId); break;
+case ‘log-weight’:
+state.modal = ‘log-weight’; break;
+case ‘save-weight’:
+saveWeight(); break;
+case ‘add-drink’:
+addDrink(); break;
+case ‘generate-list’:
+state.modal = ‘generate-list’; break;
+case ‘create-shopping-list’:
+createShoppingList(); break;
+case ‘toggle-item’:
+toggleShoppingItem(data.cat, parseInt(data.idx)); break;
+case ‘clear-list’:
+Store.saveShoppingList(null); break;
+case ‘save-settings’:
+saveSettings(); break;
+case ‘export-data’:
+exportData(); return;
+case ‘import-data’:
+$(’#import-file’).click(); return;
+case ‘clear-data’:
+if (confirm(‘Clear all data? This cannot be undone.’)) { localStorage.clear(); location.reload(); }
+return;
+}
+render();
+};
+
+// ==================== DATA OPERATIONS ====================
+const logMeal = () => {
+const { meal, period } = state.modalData;
+const portion = parseFloat($(’#portion-size’).value);
+const finalPeriod = $(’#meal-period’).value;
+const log = Store.getLog(today());
+
+log.meals[finalPeriod].push({
+mealId: meal.id, mealName: meal.name, portion,
+calories: Math.round(meal.calories * portion),
+protein: Math.round(meal.protein * portion),
+carbs: Math.round(meal.carbs * portion),
+fats: Math.round(meal.fats * portion),
+fiber: Math.round((meal.fiber || 0) * portion)
+});
+log.totals = calcTotals(log);
+Store.saveLog(today(), log);
+checkAchievements(log);
+state.modal = null; state.modalData = null;
+};
+
+const deleteMeal = (period, index) => {
+const log = Store.getLog(today());
+log.meals[period].splice(index, 1);
+log.totals = calcTotals(log);
+Store.saveLog(today(), log);
+};
+
+const saveCustomMeal = () => {
+const name = $(’#custom-name’).value.trim();
+if (!name) { alert(‘Please enter a meal name’); return; }
+
+const meal = {
+id: ‘custom-’ + uid(),
+name: name,
+category: $(’#custom-cat’).value,
+calories: parseInt($(’#custom-cal’).value) || 0,
+protein: parseInt($(’#custom-pro’).value) || 0,
+carbs: parseInt($(’#custom-carb’).value) || 0,
+fats: parseInt($(’#custom-fat’).value) || 0,
+fiber: 0, tags: [‘custom’], ingredients: [], isCustom: true
+};
+
+const saveToLibrary = $(’#custom-save’).checked;
+if (saveToLibrary) {
+const meals = Store.getCustomMeals();
+meals.push(meal);
+Store.saveCustomMeals(meals);
+}
+
+// Log immediately
+const period = state.modalData?.period || meal.category;
+const log = Store.getLog(today());
+log.meals[period].push({
+mealId: meal.id, mealName: meal.name, portion: 1,
+calories: meal.calories, protein: meal.protein,
+carbs: meal.carbs, fats: meal.fats, fiber: meal.fiber
+});
+log.totals = calcTotals(log);
+Store.saveLog(today(), log);
+checkAchievements(log);
+
+state.modal = null; state.modalData = null;
+};
+
+const saveMealEdits = (mealId) => {
+const edits = Store.getMealEdits();
+edits[mealId] = {
+calories: parseInt($(’#edit-cal’).value) || 0,
+protein: parseInt($(’#edit-pro’).value) || 0,
+carbs: parseInt($(’#edit-carb’).value) || 0,
+fats: parseInt($(’#edit-fat’).value) || 0
+};
+Store.saveMealEdits(edits);
+
+// If it’s a custom meal, update it directly
+const customMeals = Store.getCustomMeals();
+const idx = customMeals.findIndex(m => m.id === mealId);
+if (idx >= 0) {
+customMeals[idx] = { …customMeals[idx], …edits[mealId] };
+Store.saveCustomMeals(customMeals);
+}
+
+state.modal = null; state.modalData = null;
+};
+
+const deleteCustomMeal = (mealId) => {
+if (!confirm(‘Delete this custom meal?’)) return;
+const meals = Store.getCustomMeals().filter(m => m.id !== mealId);
+Store.saveCustomMeals(meals);
+state.modal = null; state.modalData = null;
+};
+
+const saveWeight = () => {
+const weight = parseFloat($(’#weight-val’).value);
+const date = $(’#weight-date’).value;
+if (!weight) { alert(‘Please enter a weight’); return; }
+const weights = Store.getWeights();
+const idx = weights.findIndex(w => w.date === date);
+const entry = { id: uid(), date, weight, change: 0 };
+if (idx >= 0) weights[idx] = entry; else weights.push(entry);
+weights.sort((a, b) => a.date.localeCompare(b.date));
+for (let i = 1; i < weights.length; i++) weights[i].change = parseFloat((weights[i].weight - weights[i-1].weight).toFixed(1));
+Store.saveWeights(weights);
+addXP(50);
+state.modal = null;
+};
+
+const addDrink = () => {
+const settings = Store.getSettings();
+const log = Store.getLog(today());
+log.alcohol.cans++;
+log.alcohol.totalCalories = log.alcohol.cans * settings.alcohol.defaultCalories;
+log.totals = calcTotals(log);
+Store.saveLog(today(), log);
+};
+
+const toggleShoppingItem = (cat, idx) => {
+const list = Store.getShoppingList();
+if (!list || !list.items) return;
+const items = list.items.filter(i => i && i.category === cat);
+if (items[idx]) {
+items[idx].checked = !items[idx].checked;
+Store.saveShoppingList(list);
+}
+};
+
+const createShoppingList = () => {
+try {
+const meals = getAllMeals();
+const selects = $$(’.generate-list-modal select’);
+const items = {};
+
+```
+selects.forEach(sel => {
+  if (!sel.value) return; // Skip blank selections
+  const meal = meals.find(m => m.id === sel.value);
+  if (meal && meal.ingredients) {
+    meal.ingredients.forEach(ing => {
+      if (!ing || !ing.item) return;
+      const key = ing.item.toLowerCase();
+      if (!items[key]) {
+        items[key] = { item: ing.item, quantity: 0, category: ing.cat || 'other', checked: false };
+      }
+      items[key].quantity += ing.qty || 1;
+    });
+  }
+});
+
+const itemList = Object.values(items);
+Store.saveShoppingList({ 
+  dateGenerated: new Date().toISOString(), 
+  days: state.shoppingDays,
+  items: itemList 
+});
+state.modal = null;
+```
+
+} catch (err) {
+console.error(‘Shopping list error:’, err);
+alert(‘Error generating list. Please try again.’);
+}
+};
+
+const saveSettings = () => {
+const s = Store.getSettings();
+s.profile.name = $(’#set-name’).value;
+s.profile.startingWeight = parseFloat($(’#set-sw’).value) || 80;
+s.profile.targetWeight = parseFloat($(’#set-tw’).value) || 78;
+s.targets.calories = parseInt($(’#set-cal’).value) || 2500;
+s.targets.protein = parseInt($(’#set-pro’).value) || 180;
+s.targets.carbs = parseInt($(’#set-carb’).value) || 280;
+s.targets.fats = parseInt($(’#set-fat’).value) || 75;
+s.alcohol.defaultCalories = parseInt($(’#set-drinkcal’).value) || 170;
+s.alcohol.weeklyCanTarget = parseInt($(’#set-cans’).value) || 4;
+Store.saveSettings(s);
+alert(‘Settings saved!’);
+};
+
+const exportData = () => {
+const data = { settings: Store.getSettings(), dailyLogs: Store.getLogs(), weights: Store.getWeights(), progress: Store.getProgress(), customMeals: Store.getCustomMeals(), mealEdits: Store.getMealEdits(), shoppingList: Store.getShoppingList(), exportDate: new Date().toISOString() };
+const blob = new Blob([JSON.stringify(data, null, 2)], { type: ‘application/json’ });
+const a = document.createElement(‘a’); a.href = URL.createObjectURL(blob); a.download = `mealprep-backup-${today()}.json`; a.click();
+};
+
+const importData = file => {
+const reader = new FileReader();
+reader.onload = e => {
+try {
+const data = JSON.parse(e.target.result);
+if (data.settings) Store.saveSettings(data.settings);
+if (data.dailyLogs) Store.saveLogs(data.dailyLogs);
+if (data.weights) Store.saveWeights(data.weights);
+if (data.progress) Store.saveProgress(data.progress);
+if (data.customMeals) Store.saveCustomMeals(data.customMeals);
+if (data.mealEdits) Store.saveMealEdits(data.mealEdits);
+if (data.shoppingList) Store.saveShoppingList(data.shoppingList);
+alert(‘Data imported!’); render();
+} catch (err) { alert(’Error: ’ + err.message); }
+};
+reader.readAsText(file);
+};
+
+// ==================== ACHIEVEMENTS ====================
+const checkAchievements = log => {
+const progress = Store.getProgress();
+const targets = Store.getSettings().targets;
+
+if (log.totals.protein >= targets.protein) {
+progress.streaks.protein.current++;
+progress.streaks.protein.longest = Math.max(progress.streaks.protein.longest, progress.streaks.protein.current);
+}
+if (log.totals.calories >= targets.calories - 100 && log.totals.calories <= targets.calories + 100) {
+progress.streaks.calories.current++;
+progress.streaks.calories.longest = Math.max(progress.streaks.calories.longest, progress.streaks.calories.current);
+}
+progress.streaks.logging.current++;
+progress.streaks.logging.longest = Math.max(progress.streaks.logging.longest, progress.streaks.logging.current);
+
+const totalDays = Object.keys(Store.getLogs()).length;
+ACHIEVEMENTS.forEach(a => {
+if (progress.achievements.includes(a.id)) return;
+let achieved = false;
+if (a.type === ‘streak’) achieved = progress.streaks[a.streakType].current >= a.target;
+if (a.type === ‘totalDays’) achieved = totalDays >= a.target;
+if (achieved) {
+progress.achievements.push(a.id);
+addXP(a.xp);
+state.modal = ‘achievement’;
+state.modalData = a;
+}
+});
+
+addXP(10);
+Store.saveProgress(progress);
+};
+
+const addXP = amount => {
+const progress = Store.getProgress();
+progress.xp += amount;
+while (progress.xp >= xpForLevel(progress.level)) {
+progress.xp -= xpForLevel(progress.level);
+progress.level++;
+}
+Store.saveProgress(progress);
+};
+
+// ==================== INIT ====================
+document.addEventListener(‘DOMContentLoaded’, () => {
+if (‘serviceWorker’ in navigator) navigator.serviceWorker.register(‘sw.js’).catch(() => {});
+render();
+});
